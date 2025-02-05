@@ -31,7 +31,7 @@ export default function BetForm() {
       // Log the data being sent (for debugging)
       console.log('Sending data:', formattedData);
 
-      const response = await axios.post('https://hook.eu2.make.com/kc0fnywsgnty5jwahucjn6sejfexumqu', formattedData, {
+      const response = await axios.post('https://hook.eu2.make.com/r0sd56dn2exc4akaprmpwqf3a9cs5nru', formattedData, {
         headers: {
           'Content-Type': 'application/json'
         }
