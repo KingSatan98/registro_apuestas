@@ -4,12 +4,14 @@ export interface Bet {
   odds: number;
   bank: number;
   type: string;
+  determination: string;
 }
 
 export interface BetFormData {
   match: string;
   bet_type: string;
-  odds: string;
-  bank: string;
+  odds: number;
+  bank: number;
   type: string;
+  determination: string;
 }

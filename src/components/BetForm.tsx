@@ -3,33 +3,25 @@ import axios from 'axios';
 import { useState } from 'react';
 import { BetFormData, Bet } from '../types';
 import { ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import Tesseract from 'tesseract.js';
 
 const userTypes = ['Staker', 'Tipster', 'Betburger'];
 
-export default function BetForm() {
+const BetForm = () => {
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null);
   const [recentBets, setRecentBets] = useState<Bet[]>([]);
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset
-  } = useForm<BetFormData>();
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<BetFormData>();
 
   const onSubmit = async (data: BetFormData) => {
     try {
-      // Convert string values to proper types
       const formattedData: Bet = {
         match: data.match.trim(),
         bet_type: data.bet_type.trim(),
         odds: Number(data.odds),
         bank: Number(data.bank),
-        type: data.type
+        type: data.type,
+        determination: data.determination // Nuevo campo
       };
-
-      // Log the data being sent (for debugging)
-      console.log('Sending data:', formattedData);
 
       const response = await axios.post('https://hook.eu2.make.com/r0sd56dn2exc4akaprmpwqf3a9cs5nru', formattedData, {
         headers: {
@@ -37,8 +29,6 @@ export default function BetForm() {
         }
       });
 
-      console.log('Response:', response);
-      
       setRecentBets(prev => [formattedData, ...prev].slice(0, 5));
       setSubmitStatus('success');
       reset();
@@ -47,7 +37,6 @@ export default function BetForm() {
         setSubmitStatus(null);
       }, 3000);
     } catch (error) {
-      console.error('Submission error:', error);
       setSubmitStatus('error');
       setTimeout(() => {
         setSubmitStatus(null);
@@ -55,9 +44,47 @@ export default function BetForm() {
     }
   };
 
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const result = await Tesseract.recognize(reader.result as string, 'eng');
+        const text = result.data.text;
+        // Aquí puedes agregar lógica para extraer las variables del texto
+        // Por ejemplo:
+        const match = text.match(/Match: (.+)/)?.[1];
+        const bet_type = text.match(/Bet Type: (.+)/)?.[1];
+        const odds = text.match(/Odds: (.+)/)?.[1];
+        const bank = text.match(/Bank: (.+)/)?.[1];
+        const type = text.match(/Type: (.+)/)?.[1];
+        const determination = text.match(/Determination: (.+)/)?.[1];
+
+        if (match) setValue('match', match);
+        if (bet_type) setValue('bet_type', bet_type);
+        if (odds) setValue('odds', Number(odds));
+        if (bank) setValue('bank', Number(bank));
+        if (type) setValue('type', type);
+        if (determination) setValue('determination', determination);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-6">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Campo para subir la captura de pantalla */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Upload Screenshot</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+          />
+        </div>
+        {/* Campos del formulario */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Match</label>
           <input
@@ -134,6 +161,22 @@ export default function BetForm() {
           )}
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Determination</label>
+          <select
+            {...register('determination', { required: 'Determination is required' })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+          >
+            <option value="GANADA">GANADA</option>
+            <option value="PERDIDA">PERDIDA</option>
+            <option value="NULA">NULA</option>
+            <option value="PENDIENTE">PENDIENTE</option>
+          </select>
+          {errors.determination && (
+            <p className="mt-1 text-sm text-red-600">{errors.determination.message}</p>
+          )}
+        </div>
+
         <button
           type="submit"
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -166,6 +209,7 @@ export default function BetForm() {
                 <div className="mt-1 text-sm text-gray-500">
                   <p>Type: {bet.type} | Bet Type: {bet.bet_type}</p>
                   <p>Odds: {bet.odds} | Bank: {bet.bank}</p>
+                  <p>Determination: {bet.determination}</p> {/* Mostrar determinación */}
                 </div>
               </div>
             ))}
@@ -174,4 +218,6 @@ export default function BetForm() {
       )}
     </div>
   );
-}
+};
+
+export default BetForm;
